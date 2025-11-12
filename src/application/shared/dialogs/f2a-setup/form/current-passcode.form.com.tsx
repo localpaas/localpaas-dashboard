@@ -8,40 +8,39 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 
 const CODE_LENGTH = 6;
 
-export const F2aSetupSchema = z.object({
-    passcode: z.string().trim().min(1, "Passcode is required"),
+export const CurrentPasscodeSchema = z.object({
+    currentPasscode: z.string().trim().min(1, "Passcode is required"),
 });
 
-export type F2aSetupSchemaInput = z.input<typeof F2aSetupSchema>;
-export type F2aSetupSchemaOutput = z.output<typeof F2aSetupSchema>;
+export type CurrentPasscodeSchemaInput = z.input<typeof CurrentPasscodeSchema>;
+export type CurrentPasscodeSchemaOutput = z.output<typeof CurrentPasscodeSchema>;
 
-export function F2aSetupForm({ isPending, onSubmit, qrCode, totpToken }: Props) {
-    void totpToken;
+export function CurrentPasscodeForm({ isPending, onSubmit }: Props) {
     const {
         handleSubmit,
         control,
         formState: { errors },
-    } = useForm<F2aSetupSchemaInput, unknown, F2aSetupSchemaOutput>({
+    } = useForm<CurrentPasscodeSchemaInput, unknown, CurrentPasscodeSchemaOutput>({
         defaultValues: {
-            passcode: "",
+            currentPasscode: "",
         },
-        resolver: zodResolver(F2aSetupSchema),
+        resolver: zodResolver(CurrentPasscodeSchema),
         mode: "onSubmit",
     });
 
     const {
-        field: passcode,
-        fieldState: { invalid: isPasscodeInvalid },
+        field: currentPasscode,
+        fieldState: { invalid: isCurrentPasscodeInvalid },
     } = useController({
-        name: "passcode",
+        name: "currentPasscode",
         control,
     });
 
-    function onValid(values: F2aSetupSchemaOutput) {
+    function onValid(values: CurrentPasscodeSchemaOutput) {
         void onSubmit(values);
     }
 
-    function onInvalid(_errors: FieldErrors<F2aSetupSchemaOutput>) {
+    function onInvalid(_errors: FieldErrors<CurrentPasscodeSchemaOutput>) {
         console.log(_errors);
     }
 
@@ -56,22 +55,14 @@ export function F2aSetupForm({ isPending, onSubmit, qrCode, totpToken }: Props) 
             >
                 <FieldGroup>
                     <Field>
-                        <FieldLabel htmlFor="qrCode">QR Code</FieldLabel>
-                        <img
-                            src={`data:image/png;base64,${qrCode}`}
-                            alt="QR Code"
-                        />
-                    </Field>
-
-                    <Field>
-                        <FieldLabel htmlFor="passcode">Passcode</FieldLabel>
+                        <FieldLabel htmlFor="currentPasscode">Current Passcode</FieldLabel>
                         <div className="flex justify-center">
                             <InputOTP
-                                id="passcode"
-                                value={passcode.value}
-                                onChange={passcode.onChange}
+                                id="currentPasscode"
+                                value={currentPasscode.value}
+                                onChange={currentPasscode.onChange}
                                 maxLength={CODE_LENGTH}
-                                aria-invalid={isPasscodeInvalid}
+                                aria-invalid={isCurrentPasscodeInvalid}
                             >
                                 <InputOTPGroup>
                                     <InputOTPSlot index={0} />
@@ -86,7 +77,7 @@ export function F2aSetupForm({ isPending, onSubmit, qrCode, totpToken }: Props) 
                                 </InputOTPGroup>
                             </InputOTP>
                         </div>
-                        <FieldError errors={[errors.passcode]} />
+                        <FieldError errors={[errors.currentPasscode]} />
                     </Field>
 
                     <Field>
@@ -94,7 +85,7 @@ export function F2aSetupForm({ isPending, onSubmit, qrCode, totpToken }: Props) 
                             type="submit"
                             isLoading={isPending}
                         >
-                            Verify
+                            Continue
                         </Button>
                     </Field>
                 </FieldGroup>
@@ -105,7 +96,6 @@ export function F2aSetupForm({ isPending, onSubmit, qrCode, totpToken }: Props) 
 
 interface Props {
     isPending: boolean;
-    onSubmit: (values: F2aSetupSchemaOutput) => Promise<void> | void;
-    qrCode: string;
-    totpToken: string;
+    onSubmit: (values: CurrentPasscodeSchemaOutput) => Promise<void> | void;
 }
+
