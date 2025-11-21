@@ -3,20 +3,21 @@ import React, { type PropsWithChildren, useImperativeHandle } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { type FieldErrors, FormProvider, useForm } from "react-hook-form";
-import { mapModuleAccesses } from "~/user-management/module-shared/utils/map-module-accesses";
+import type { UserBase } from "~/user-management/domain";
+import { UserRoleBadge, UserSecurityBadge } from "~/user-management/module-shared/components";
+import { UserInput } from "~/user-management/module-shared/form/user-input";
+import { mapModuleAccesses } from "~/user-management/module-shared/utils";
 
 import { InfoBlock, LabelWithInfo } from "@application/shared/components";
 import { ESecuritySettings, EUserRole } from "@application/shared/enums";
 
-import { UserInput } from "@application/modules/user-management/module-shared/form/user-input";
-
 import { type ValidationException } from "@infrastructure/exceptions/validation";
 
-import { Information } from "../form-components";
-import { SingleUserFormSchema, type SingleUserFormSchemaInput, type SingleUserFormSchemaOutput } from "../schemas";
-import { type SingleUserFormRef } from "../types";
+import { Information, Security } from "../form-components";
+import { ProfileFormSchema, type ProfileFormSchemaInput, type ProfileFormSchemaOutput } from "../schemas";
+import { type ProfileFormRef } from "../types";
 
-const DEFAULTS: SingleUserFormSchemaInput = {
+const DEFAULTS: ProfileFormSchemaInput = {
     fullName: "",
     email: "",
     username: "",
@@ -29,17 +30,17 @@ const DEFAULTS: SingleUserFormSchemaInput = {
     moduleAccesses: [],
 };
 
-type SchemaInput = SingleUserFormSchemaInput;
-type SchemaOutput = SingleUserFormSchemaOutput;
+type SchemaInput = ProfileFormSchemaInput;
+type SchemaOutput = ProfileFormSchemaOutput;
 
-export function SingleUserForm({ ref, defaultValues, onSubmit, children }: Props) {
+export function ProfileForm({ ref, defaultValues, onSubmit, children }: Props) {
     const methods = useForm<SchemaInput, unknown, SchemaOutput>({
         defaultValues: {
             ...DEFAULTS,
             ...defaultValues,
             moduleAccesses: mapModuleAccesses(defaultValues.moduleAccesses),
         },
-        resolver: zodResolver(SingleUserFormSchema),
+        resolver: zodResolver(ProfileFormSchema),
         mode: "onSubmit",
     });
 
@@ -89,7 +90,7 @@ export function SingleUserForm({ ref, defaultValues, onSubmit, children }: Props
                         titleWidth={150}
                         title="Role"
                     >
-                        <UserInput.Role<SingleUserFormSchemaInput> name="role" />
+                        <UserRoleBadge role={defaultValues.role} />
                     </InfoBlock>
 
                     {/* Joining date */}
@@ -101,17 +102,19 @@ export function SingleUserForm({ ref, defaultValues, onSubmit, children }: Props
                     {/* Access Expiration */}
                     <div className="h-px bg-border" />
                     <InfoBlock title="Access Expiration">
-                        <UserInput.AccessExpiration<SingleUserFormSchemaInput>
-                            className="md:min-w-[400px] w-fit"
-                            name="accessExpireAt"
-                        />
+                        {defaultValues.accessExpireAt
+                            ? format(defaultValues.accessExpireAt, "yyyy-MM-dd HH:mm:ss")
+                            : "-"}
                     </InfoBlock>
 
                     {/* Security Option */}
                     <div className="h-px bg-border" />
                     <InfoBlock title="Security Option">
-                        <UserInput.SecurityOption<SingleUserFormSchemaInput> name="securityOption" />
+                        <UserSecurityBadge securityOption={defaultValues.securityOption} />
                     </InfoBlock>
+
+                    {/* Security */}
+                    <Security defaultValues={defaultValues} />
 
                     {/* Project Access */}
                     <div className="h-px bg-border" />
@@ -123,9 +126,10 @@ export function SingleUserForm({ ref, defaultValues, onSubmit, children }: Props
                             />
                         }
                     >
-                        <UserInput.ProjectAccess<SingleUserFormSchemaInput>
+                        <UserInput.ProjectAccess<ProfileFormSchemaInput>
                             name="projectAccesses"
                             isAdmin={isAdmin}
+                            disabled
                         />
                     </InfoBlock>
 
@@ -139,9 +143,10 @@ export function SingleUserForm({ ref, defaultValues, onSubmit, children }: Props
                             />
                         }
                     >
-                        <UserInput.ModuleAccess<SingleUserFormSchemaInput>
+                        <UserInput.ModuleAccess<ProfileFormSchemaInput>
                             name="moduleAccesses"
                             isAdmin={isAdmin}
+                            disabled
                         />
                     </InfoBlock>
                     {children}
@@ -152,7 +157,7 @@ export function SingleUserForm({ ref, defaultValues, onSubmit, children }: Props
 }
 
 type Props = PropsWithChildren<{
-    ref?: React.Ref<SingleUserFormRef>;
-    defaultValues: Partial<SchemaInput> & { createdAt: Date };
+    ref?: React.Ref<ProfileFormRef>;
+    defaultValues: UserBase;
     onSubmit: (values: SchemaOutput) => void;
 }>;
