@@ -1,21 +1,17 @@
-export interface F2aSetupDialogState {
+export interface ChangePasswordDialogState {
     state:
         | {
               mode: "open";
-          }
-        | {
-              mode: "change";
           }
         | {
               mode: "closed";
           };
 }
 
-export interface F2aSetupDialogOptions {
+export interface ChangePasswordDialogOptions {
     props?: {
         onClose?: () => void;
         onSuccess?: () => void;
         onError?: (error: Error) => void;
-        isSetupRequired?: boolean;
     };
 }
