@@ -6,16 +6,16 @@ import { cn } from "@lib/utils";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 
-function View({ inviteLink }: Props) {
+function View({ resetLink }: Props) {
     function handleCopyLink() {
-        if (!inviteLink) {
+        if (!resetLink) {
             return;
         }
 
         void navigator.clipboard
-            .writeText(inviteLink)
+            .writeText(resetLink)
             .then(() => {
-                toast.success("Invite link copied to clipboard");
+                toast.success("Reset link copied to clipboard");
             })
             .catch(() => {
                 toast.error("Failed to copy link");
@@ -26,14 +26,10 @@ function View({ inviteLink }: Props) {
         <div className={cn(dashedBorderBox)}>
             <div className="flex items-center justify-center gap-4">
                 <div className="text-sm text-foreground text-center">
-                    {inviteLink ? (
-                        <p className="break-all">{inviteLink}</p>
+                    {resetLink ? (
+                        <p className="break-all">{resetLink}</p>
                     ) : (
-                        <>
-                            Press the below button to get the invitation link and
-                            <br />
-                            give it to the user you want to invite
-                        </>
+                        <>Press the below button to get the password reset link and give it to the user</>
                     )}
                 </div>
                 <Button
@@ -41,7 +37,7 @@ function View({ inviteLink }: Props) {
                     variant="link"
                     size="icon"
                     className="shrink-0"
-                    disabled={!inviteLink}
+                    disabled={!resetLink}
                     onClick={handleCopyLink}
                 >
                     <Copy className="h-4 w-4 text-muted-foreground" />
@@ -52,7 +48,7 @@ function View({ inviteLink }: Props) {
 }
 
 interface Props {
-    inviteLink: string | null;
+    resetLink: string | null;
 }
 
 export const LinkGenerate = memo(View);
