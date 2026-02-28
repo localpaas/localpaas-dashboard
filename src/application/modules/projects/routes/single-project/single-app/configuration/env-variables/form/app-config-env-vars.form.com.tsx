@@ -4,36 +4,35 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { type FieldErrors, FormProvider, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { EnvVarsFormHeader } from "~/projects/module-shared/components";
-
-import { EnvVarsBaseForm } from "@application/modules/projects/module-shared/form/env-vars/env-vars.form.com";
+import { EnvVarsBaseForm } from "~/projects/module-shared/form";
 
 import { type ValidationException } from "@infrastructure/exceptions/validation";
 
 import {
-    ProjectEnvVarsFormSchema,
-    type ProjectEnvVarsFormSchemaInput,
-    type ProjectEnvVarsFormSchemaOutput,
+    AppConfigEnvVarsFormSchema,
+    type AppConfigEnvVarsFormSchemaInput,
+    type AppConfigEnvVarsFormSchemaOutput,
 } from "../schemas";
-import { type ProjectEnvVarsFormRef } from "../types";
+import { type AppConfigEnvVarsFormRef } from "../types";
 
-const DEFAULTS: ProjectEnvVarsFormSchemaInput = {
+const DEFAULTS: AppConfigEnvVarsFormSchemaInput = {
     buildtime: [],
     runtime: [],
 };
 
-type SchemaInput = ProjectEnvVarsFormSchemaInput;
-type SchemaOutput = ProjectEnvVarsFormSchemaOutput;
+type SchemaInput = AppConfigEnvVarsFormSchemaInput;
+type SchemaOutput = AppConfigEnvVarsFormSchemaOutput;
 
-export const ProjectEnvVarsForm = React.forwardRef<ProjectEnvVarsFormRef, Props>(function ProjectEnvVarsForm(
+export const AppConfigEnvVarsForm = React.forwardRef<AppConfigEnvVarsFormRef, Props>(function AppConfigEnvVarsForm(
     { defaultValues, onSubmit, children }: Props,
-    ref: React.ForwardedRef<ProjectEnvVarsFormRef>,
+    ref: React.ForwardedRef<AppConfigEnvVarsFormRef>,
 ) {
     const methods = useForm<SchemaInput, unknown, SchemaOutput>({
         defaultValues: {
             ...DEFAULTS,
             ...defaultValues,
         },
-        resolver: zodResolver(ProjectEnvVarsFormSchema),
+        resolver: zodResolver(AppConfigEnvVarsFormSchema),
         mode: "onSubmit",
     });
 
@@ -85,7 +84,7 @@ export const ProjectEnvVarsForm = React.forwardRef<ProjectEnvVarsFormRef, Props>
     );
 
     return (
-        <div className="single-project-env-vars-form">
+        <div className="single-app-env-vars-form">
             <FormProvider {...methods}>
                 <form
                     onSubmit={event => {
@@ -110,7 +109,7 @@ export const ProjectEnvVarsForm = React.forwardRef<ProjectEnvVarsFormRef, Props>
                         viewMode={viewMode}
                         isRevealed={isRevealed}
                         name="buildtime"
-                        title="Build Time Env Vars"
+                        title="Buildtime Env Vars"
                     />
                     <div className="h-px bg-border" />
                     <EnvVarsBaseForm
@@ -129,7 +128,6 @@ export const ProjectEnvVarsForm = React.forwardRef<ProjectEnvVarsFormRef, Props>
 });
 
 type Props = PropsWithChildren<{
-    ref?: React.Ref<ProjectEnvVarsFormRef>;
-    defaultValues: Partial<ProjectEnvVarsFormSchemaInput>;
-    onSubmit: (values: ProjectEnvVarsFormSchemaOutput) => void;
+    defaultValues: Partial<AppConfigEnvVarsFormSchemaInput>;
+    onSubmit: (values: AppConfigEnvVarsFormSchemaOutput) => void;
 }>;
