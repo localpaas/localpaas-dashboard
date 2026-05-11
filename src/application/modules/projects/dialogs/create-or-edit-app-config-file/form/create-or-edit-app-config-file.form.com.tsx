@@ -6,32 +6,42 @@ import { type FieldErrors, useController, useForm, useWatch } from "react-hook-f
 
 import { InfoBlock, LabelWithInfo } from "@application/shared/components";
 
-import { Button, Field, FieldError, FieldGroup, Input, Tabs, TabsList, TabsTrigger } from "@/components/ui";
+import { Button, Checkbox, Field, FieldError, FieldGroup, Input, Tabs, TabsList, TabsTrigger } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
 
-import type { CreateOrEditProjectSecretFormInput, CreateOrEditProjectSecretFormOutput } from "../schemas";
-import { CreateOrEditProjectSecretFormSchema } from "../schemas";
+import type { CreateOrEditAppConfigFileFormInput, CreateOrEditAppConfigFileFormOutput } from "../schemas";
+import {
+    APP_CONFIG_FILE_DEFAULT_FILE_MODE,
+    APP_CONFIG_FILE_DEFAULT_FILE_PATH,
+    CreateOrEditAppConfigFileFormSchema,
+} from "../schemas";
 
-export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChanges, isEditMode, initialValues }: Props) {
+export function CreateOrEditAppConfigFileForm({ isPending, onSubmit, onHasChanges, isEditMode, initialValues }: Props) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const {
         handleSubmit,
         control,
         formState: { errors, isDirty },
-    } = useForm<CreateOrEditProjectSecretFormInput, unknown, CreateOrEditProjectSecretFormOutput>({
+    } = useForm<CreateOrEditAppConfigFileFormInput, unknown, CreateOrEditAppConfigFileFormOutput>({
         defaultValues: {
             name: initialValues?.name ?? "",
             valueType: initialValues?.valueType ?? "text",
             isEditMode,
             textValue: "",
             binaryFile: null,
+            mountIntoFilesystem: initialValues?.mountIntoFilesystem ?? false,
+            filePath: initialValues?.filePath ?? APP_CONFIG_FILE_DEFAULT_FILE_PATH,
+            fileMode: initialValues?.fileMode ?? APP_CONFIG_FILE_DEFAULT_FILE_MODE,
+            fileUid: initialValues?.fileUid ?? "",
+            fileGid: initialValues?.fileGid ?? "",
         },
-        resolver: zodResolver(CreateOrEditProjectSecretFormSchema),
+        resolver: zodResolver(CreateOrEditAppConfigFileFormSchema),
         mode: "onSubmit",
     });
 
     const valueType = useWatch({ control, name: "valueType" });
+    const mountIntoFilesystem = useWatch({ control, name: "mountIntoFilesystem" });
     const selectedFile = useWatch({ control, name: "binaryFile" });
 
     useEffect(() => {
@@ -59,16 +69,47 @@ export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChange
         control,
     });
 
+    const { field: mountIntoFilesystemField } = useController({
+        name: "mountIntoFilesystem",
+        control,
+    });
+
     const { field: binaryFileField } = useController({
         name: "binaryFile",
         control,
     });
 
-    function onValid(values: CreateOrEditProjectSecretFormOutput) {
+    const {
+        field: filePath,
+        fieldState: { invalid: isFilePathInvalid },
+    } = useController({
+        name: "filePath",
+        control,
+    });
+
+    const {
+        field: fileMode,
+        fieldState: { invalid: isFileModeInvalid },
+    } = useController({
+        name: "fileMode",
+        control,
+    });
+
+    const { field: fileUid } = useController({
+        name: "fileUid",
+        control,
+    });
+
+    const { field: fileGid } = useController({
+        name: "fileGid",
+        control,
+    });
+
+    function onValid(values: CreateOrEditAppConfigFileFormOutput) {
         void onSubmit(values);
     }
 
-    function onInvalid(_errors: FieldErrors<CreateOrEditProjectSecretFormOutput>) {
+    function onInvalid(_errors: FieldErrors<CreateOrEditAppConfigFileFormOutput>) {
         console.error(_errors);
     }
 
@@ -81,7 +122,7 @@ export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChange
             className="flex flex-col gap-6"
         >
             <InfoBlock
-                titleWidth={220}
+                titleWidth={240}
                 title={
                     <LabelWithInfo
                         label="Name"
@@ -92,9 +133,9 @@ export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChange
                 <FieldGroup>
                     <Field>
                         <Input
-                            id="project-secret-name"
+                            id="app-config-file-name"
                             {...name}
-                            placeholder="SECRET_NAME"
+                            placeholder="CONFIG_NAME"
                             aria-invalid={isNameInvalid}
                             disabled={isEditMode}
                         />
@@ -104,7 +145,7 @@ export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChange
             </InfoBlock>
 
             <InfoBlock
-                titleWidth={220}
+                titleWidth={240}
                 title={
                     <LabelWithInfo
                         label="Value Type"
@@ -127,7 +168,7 @@ export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChange
 
             {valueType === "text" ? (
                 <InfoBlock
-                    titleWidth={220}
+                    titleWidth={240}
                     title={
                         <LabelWithInfo
                             label="Value"
@@ -138,20 +179,22 @@ export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChange
                     <FieldGroup>
                         <Field>
                             <Textarea
-                                id="project-secret-text-value"
+                                id="app-config-file-text-value"
                                 {...textValue}
-                                placeholder={isEditMode ? "Leave empty to keep current value" : "Enter secret value"}
+                                placeholder={
+                                    isEditMode ? "Leave empty to keep current content" : "Enter config content"
+                                }
                                 rows={8}
                                 aria-invalid={isTextValueInvalid}
                             />
-                            <p className="text-sm text-muted-foreground">Max size: 500kb</p>
+                            <p className="text-sm text-muted-foreground">Max size: 1mb</p>
                             <FieldError errors={[errors.textValue]} />
                         </Field>
                     </FieldGroup>
                 </InfoBlock>
             ) : (
                 <InfoBlock
-                    titleWidth={220}
+                    titleWidth={240}
                     title={
                         <LabelWithInfo
                             label="Value"
@@ -173,11 +216,11 @@ export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChange
                                     Choose File
                                 </Button>
                                 <span className="truncate text-sm text-muted-foreground">
-                                    {selectedFile?.name ?? (isEditMode ? "Leave empty to keep current value" : "")}
+                                    {selectedFile?.name ?? (isEditMode ? "Leave empty to keep current content" : "")}
                                 </span>
                             </div>
                             <Input
-                                id="project-secret-binary-value"
+                                id="app-config-file-binary-value"
                                 ref={fileInputRef}
                                 type="file"
                                 className="hidden"
@@ -185,12 +228,97 @@ export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChange
                                     binaryFileField.onChange(event.target.files?.[0] ?? null);
                                 }}
                             />
-                            <p className="text-sm text-muted-foreground">Max size: 500kb</p>
+                            <p className="text-sm text-muted-foreground">Max size: 1mb</p>
                             <FieldError errors={[errors.binaryFile]} />
                         </Field>
                     </FieldGroup>
                 </InfoBlock>
             )}
+
+            <InfoBlock
+                titleWidth={240}
+                title={<LabelWithInfo label="Mount into Filesystem" />}
+            >
+                <Checkbox
+                    checked={mountIntoFilesystem}
+                    onCheckedChange={checked => {
+                        mountIntoFilesystemField.onChange(checked === true);
+                    }}
+                />
+            </InfoBlock>
+
+            <InfoBlock
+                titleWidth={240}
+                title={
+                    <LabelWithInfo
+                        label="File Path"
+                        isRequired={mountIntoFilesystem}
+                    />
+                }
+            >
+                <FieldGroup>
+                    <Field>
+                        <Input
+                            id="app-config-file-path"
+                            {...filePath}
+                            placeholder={APP_CONFIG_FILE_DEFAULT_FILE_PATH}
+                            aria-invalid={isFilePathInvalid}
+                            disabled={!mountIntoFilesystem}
+                        />
+                        <FieldError errors={[errors.filePath]} />
+                    </Field>
+                </FieldGroup>
+            </InfoBlock>
+
+            <InfoBlock
+                titleWidth={240}
+                title={
+                    <LabelWithInfo
+                        label="File Mode"
+                        isRequired={mountIntoFilesystem}
+                    />
+                }
+            >
+                <FieldGroup>
+                    <Field>
+                        <Input
+                            id="app-config-file-mode"
+                            {...fileMode}
+                            placeholder="default: 0444"
+                            aria-invalid={isFileModeInvalid}
+                            className="max-w-[180px]"
+                            disabled={!mountIntoFilesystem}
+                        />
+                        <FieldError errors={[errors.fileMode]} />
+                    </Field>
+                </FieldGroup>
+            </InfoBlock>
+
+            <InfoBlock
+                titleWidth={240}
+                title={<LabelWithInfo label="File UID" />}
+            >
+                <Input
+                    id="app-config-file-uid"
+                    {...fileUid}
+                    placeholder="uid"
+                    className="max-w-[180px]"
+                    disabled={!mountIntoFilesystem}
+                />
+            </InfoBlock>
+
+            <InfoBlock
+                titleWidth={240}
+                title={<LabelWithInfo label="File GID" />}
+            >
+                <Input
+                    id="app-config-file-gid"
+                    {...fileGid}
+                    placeholder="gid"
+                    className="max-w-[180px]"
+                    disabled={!mountIntoFilesystem}
+                />
+            </InfoBlock>
 
             <Field>
                 <div className="flex justify-end">
@@ -208,8 +336,8 @@ export function CreateOrEditProjectSecretForm({ isPending, onSubmit, onHasChange
 
 interface Props {
     isPending: boolean;
-    onSubmit: (values: CreateOrEditProjectSecretFormOutput) => Promise<void> | void;
+    onSubmit: (values: CreateOrEditAppConfigFileFormOutput) => Promise<void> | void;
     onHasChanges?: (dirty: boolean) => void;
     isEditMode: boolean;
-    initialValues?: Partial<CreateOrEditProjectSecretFormInput>;
+    initialValues?: Partial<CreateOrEditAppConfigFileFormInput>;
 }

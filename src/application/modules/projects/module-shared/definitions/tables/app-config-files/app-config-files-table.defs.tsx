@@ -1,11 +1,11 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
-import type { ProjectSecret } from "~/projects/domain";
+import type { AppConfigFile } from "~/projects/domain";
 import { ProjectSecretStatusBadge } from "~/projects/module-shared/components";
 
 import { MenuCell } from "./building-blocks";
 
-function createColumns(projectId: string): ColumnDef<ProjectSecret>[] {
+function createColumns(projectId: string, appId: string): ColumnDef<AppConfigFile>[] {
     return [
         {
             accessorKey: "name",
@@ -29,20 +29,34 @@ function createColumns(projectId: string): ColumnDef<ProjectSecret>[] {
             },
         },
         {
-            accessorKey: "updatedAt",
-            header: "Last Updated",
+            header: "Mountpoint",
             cell: ({ row: { original } }) => {
-                const updatedAt = original.updatedAt ?? original.createdAt;
-                return format(updatedAt, "yyyy-MM-dd HH:mm:ss");
+                return original.swarmRef?.file?.name ?? "-";
+            },
+        },
+        {
+            accessorKey: "expireAt",
+            header: "Expire At",
+            cell: ({ row: { original } }) => {
+                if (!original.expireAt) {
+                    return "-";
+                }
+
+                return format(original.expireAt, "yyyy-MM-dd HH:mm:ss");
             },
         },
         {
             header: "Actions",
             cell: ({ row: { original } }) => {
+                if (original.inherited) {
+                    return null;
+                }
+
                 return (
                     <MenuCell
                         projectId={projectId}
-                        secret={original}
+                        appId={appId}
+                        configFile={original}
                     />
                 );
             },
@@ -50,6 +64,6 @@ function createColumns(projectId: string): ColumnDef<ProjectSecret>[] {
     ];
 }
 
-export const ProjectSecretsTableDefs = Object.freeze({
+export const AppConfigFilesTableDefs = Object.freeze({
     columns: createColumns,
 });
