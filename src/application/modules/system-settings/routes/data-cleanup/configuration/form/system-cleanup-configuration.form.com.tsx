@@ -1,10 +1,9 @@
 import React, { type PropsWithChildren, useEffect, useImperativeHandle, useMemo, useState } from "react";
 
-import { PasswordInput } from "@components/ui/input-password";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type FieldPath, FormProvider, useController, useForm, useFormContext, useWatch } from "react-hook-form";
-import { CloudStorageQueries, NotificationQueries } from "~/settings/data";
-import type { SystemBackupSettings } from "~/system-settings/domain";
+import { NotificationQueries } from "~/settings/data";
+import type { SystemCleanupSettings } from "~/system-settings/domain";
 
 import { AppLink, Combobox, InfoBlock, LabelWithInfo } from "@application/shared/components";
 import { DEFAULT_PAGINATED_DATA, ROUTE } from "@application/shared/constants";
@@ -12,24 +11,23 @@ import { ESettingStatus } from "@application/shared/enums";
 
 import { type ValidationException } from "@infrastructure/exceptions/validation";
 
-import { Button, Checkbox, Field, FieldError, FieldGroup, Input, Tabs, TabsList, TabsTrigger } from "@/components/ui";
+import { Button, Checkbox, Field, FieldError, FieldGroup, Input } from "@/components/ui";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 
-import { ESystemBackupCompressionFormat, ESystemBackupEncryptionFormat } from "../../../../module-shared/enums";
 import {
-    type SystemBackupConfigurationFormInput,
-    type SystemBackupConfigurationFormOutput,
-    SystemBackupConfigurationFormSchema,
+    type SystemCleanupConfigurationFormInput,
+    type SystemCleanupConfigurationFormOutput,
+    SystemCleanupConfigurationFormSchema,
 } from "../schemas";
-import type { SystemBackupConfigurationFormRef } from "../types";
+import type { SystemCleanupConfigurationFormRef } from "../types";
 
 import {
-    emptySystemBackupConfigurationFormDefaults,
-    mapSystemBackupSettingsToFormInput,
-} from "./system-backup-configuration.form-mappers";
+    emptySystemCleanupConfigurationFormDefaults,
+    mapSystemCleanupSettingsToFormInput,
+} from "./system-cleanup-configuration.form-mappers";
 
-type SchemaInput = SystemBackupConfigurationFormInput;
-type SchemaOutput = SystemBackupConfigurationFormOutput;
+type SchemaInput = SystemCleanupConfigurationFormInput;
+type SchemaOutput = SystemCleanupConfigurationFormOutput;
 
 function SectionHeader({ children }: PropsWithChildren) {
     return <div className="rounded-lg bg-muted px-4 py-3 text-sm font-semibold text-foreground">{children}</div>;
@@ -53,15 +51,6 @@ function EnabledField() {
 
 function GeneralFields() {
     const { control } = useFormContext<SchemaInput, unknown, SchemaOutput>();
-    const [cloudStorageSearch, setCloudStorageSearch] = useState("");
-
-    const {
-        data: { data: cloudStorages } = DEFAULT_PAGINATED_DATA,
-        isFetching,
-        refetch,
-        isRefetching,
-    } = CloudStorageQueries.useFindManyPaginated({ search: cloudStorageSearch });
-
     const {
         field: scheduleInterval,
         fieldState: { error: scheduleIntervalError, invalid: isScheduleIntervalInvalid },
@@ -70,33 +59,6 @@ function GeneralFields() {
         field: scheduleFrom,
         fieldState: { error: scheduleFromError, invalid: isScheduleFromInvalid },
     } = useController({ control, name: "scheduleFrom" });
-    const { field: compressionFormat } = useController({ control, name: "compressionFormat" });
-    const { field: encryptionFormat } = useController({ control, name: "encryptionFormat" });
-    const {
-        field: encryptionSecret,
-        fieldState: { error: encryptionSecretError, invalid: isEncryptionSecretInvalid },
-    } = useController({ control, name: "encryptionSecret" });
-    const {
-        field: cloudStorage,
-        fieldState: { error: cloudStorageError, invalid: isCloudStorageInvalid },
-    } = useController({ control, name: "cloudStorage" });
-    const {
-        field: cloudStorageDestinationDir,
-        fieldState: { error: cloudStorageDestinationDirError, invalid: isCloudStorageDestinationDirInvalid },
-    } = useController({ control, name: "cloudStorageDestinationDir" });
-
-    useEffect(() => {
-        if (encryptionFormat.value !== ESystemBackupEncryptionFormat.Age) {
-            encryptionSecret.onChange("");
-        }
-    }, [encryptionFormat.value, encryptionSecret]);
-
-    const cloudStorageOptions = useMemo(() => {
-        return cloudStorages.map(item => ({
-            value: { id: item.id, name: item.name },
-            label: item.name,
-        }));
-    }, [cloudStorages]);
 
     return (
         <>
@@ -141,130 +103,215 @@ function GeneralFields() {
                         </Field>
                     </FieldGroup>
                 </InfoBlock>
-
-                <div className="border-t" />
-
-                <InfoBlock title="Compress Backups">
-                    <Tabs
-                        value={compressionFormat.value}
-                        onValueChange={compressionFormat.onChange}
-                    >
-                        <TabsList>
-                            <TabsTrigger value={ESystemBackupCompressionFormat.None}>Disabled</TabsTrigger>
-                            <TabsTrigger value={ESystemBackupCompressionFormat.Gzip}>Gzip</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </InfoBlock>
-
-                <InfoBlock title="Encrypt Backups">
-                    <Tabs
-                        value={encryptionFormat.value}
-                        onValueChange={encryptionFormat.onChange}
-                    >
-                        <TabsList>
-                            <TabsTrigger value={ESystemBackupEncryptionFormat.None}>Disabled</TabsTrigger>
-                            <TabsTrigger value={ESystemBackupEncryptionFormat.Age}>Age</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </InfoBlock>
-
-                {encryptionFormat.value !== ESystemBackupEncryptionFormat.None && (
-                    <InfoBlock title="Encryption Secret">
-                        <FieldGroup>
-                            <Field className="max-w-[400px]">
-                                <PasswordInput
-                                    value={encryptionSecret.value}
-                                    onChange={encryptionSecret.onChange}
-                                    placeholder="password"
-                                    className="max-w-[400px]"
-                                    aria-invalid={isEncryptionSecretInvalid}
-                                />
-                                <FieldError errors={[encryptionSecretError]} />
-                            </Field>
-                        </FieldGroup>
-                    </InfoBlock>
-                )}
-
-                <div className="border-t" />
-
-                <InfoBlock title="Save Backups in Cloud Storage">
-                    <FieldGroup>
-                        <Field>
-                            <Combobox
-                                options={cloudStorageOptions}
-                                value={cloudStorage.value?.id ?? null}
-                                onChange={(_, option) => {
-                                    cloudStorage.onChange(option ?? undefined);
-                                }}
-                                onSearch={setCloudStorageSearch}
-                                placeholder="Select Cloud Storage"
-                                emptyText="No cloud storages available"
-                                className="max-w-[400px]"
-                                valueKey="id"
-                                searchable
-                                closeOnSelect
-                                allowClear
-                                loading={isFetching}
-                                onRefresh={() => void refetch()}
-                                isRefreshing={isRefetching}
-                                aria-invalid={isCloudStorageInvalid}
-                            />
-                            <FieldError errors={[cloudStorageError]} />
-                            <AppLink.Basic
-                                to={ROUTE.settings.cloudStorages.$route}
-                                className="text-sm text-blue-500"
-                                ignorePrevPath
-                            >
-                                Manage Cloud Storage Settings
-                            </AppLink.Basic>
-                        </Field>
-                        <Field>
-                            <Input
-                                {...cloudStorageDestinationDir}
-                                placeholder="Destination directory"
-                                className="max-w-[400px]"
-                                aria-invalid={isCloudStorageDestinationDirInvalid}
-                            />
-                            <FieldError errors={[cloudStorageDestinationDirError]} />
-                        </Field>
-                    </FieldGroup>
-                </InfoBlock>
             </div>
         </>
     );
 }
 
-function EnabledBackupConfigurationFields() {
+function DBCleanupOptionsFields() {
     const { control } = useFormContext<SchemaInput, unknown, SchemaOutput>();
-    const status = useWatch({ control, name: "status" });
-
-    if (status !== ESettingStatus.Active) {
-        return null;
-    }
+    const { field: enabled } = useController({ control, name: "dbObjectRetention.enabled" });
+    const {
+        field: tasks,
+        fieldState: { error: tasksError, invalid: isTasksInvalid },
+    } = useController({ control, name: "dbObjectRetention.tasks" });
+    const {
+        field: deployments,
+        fieldState: { error: deploymentsError, invalid: isDeploymentsInvalid },
+    } = useController({ control, name: "dbObjectRetention.deployments" });
+    const {
+        field: sysErrors,
+        fieldState: { error: sysErrorsError, invalid: isSysErrorsInvalid },
+    } = useController({ control, name: "dbObjectRetention.sysErrors" });
+    const {
+        field: deletedObjects,
+        fieldState: { error: deletedObjectsError, invalid: isDeletedObjectsInvalid },
+    } = useController({ control, name: "dbObjectRetention.deletedObjects" });
 
     return (
         <>
-            <GeneralFields />
-            <BackupOptionsFields />
-            <NotificationFields />
+            <SectionHeader>DB Cleanup Options</SectionHeader>
+            <div className="flex flex-col gap-6 px-3">
+                <InfoBlock title="Enabled">
+                    <Checkbox
+                        checked={enabled.value}
+                        onCheckedChange={enabled.onChange}
+                    />
+                </InfoBlock>
+
+                {enabled.value && (
+                    <>
+                        <InfoBlock title="Task Object Retention">
+                            <FieldGroup>
+                                <Field>
+                                    <Input
+                                        {...tasks}
+                                        placeholder="180d"
+                                        className="max-w-[400px]"
+                                        aria-invalid={isTasksInvalid}
+                                    />
+                                    <FieldError errors={[tasksError]} />
+                                </Field>
+                            </FieldGroup>
+                        </InfoBlock>
+
+                        <InfoBlock title="Deployment Object Retention">
+                            <FieldGroup>
+                                <Field>
+                                    <Input
+                                        {...deployments}
+                                        placeholder="180d"
+                                        className="max-w-[400px]"
+                                        aria-invalid={isDeploymentsInvalid}
+                                    />
+                                    <FieldError errors={[deploymentsError]} />
+                                </Field>
+                            </FieldGroup>
+                        </InfoBlock>
+
+                        <InfoBlock title="Sys Error Object Retention">
+                            <FieldGroup>
+                                <Field>
+                                    <Input
+                                        {...sysErrors}
+                                        placeholder="180d"
+                                        className="max-w-[400px]"
+                                        aria-invalid={isSysErrorsInvalid}
+                                    />
+                                    <FieldError errors={[sysErrorsError]} />
+                                </Field>
+                            </FieldGroup>
+                        </InfoBlock>
+
+                        <InfoBlock title="Deleted Object Retention">
+                            <FieldGroup>
+                                <Field>
+                                    <Input
+                                        {...deletedObjects}
+                                        placeholder="180d"
+                                        className="max-w-[400px]"
+                                        aria-invalid={isDeletedObjectsInvalid}
+                                    />
+                                    <FieldError errors={[deletedObjectsError]} />
+                                </Field>
+                            </FieldGroup>
+                        </InfoBlock>
+                    </>
+                )}
+            </div>
         </>
     );
 }
 
-function BackupOptionsFields() {
+function DockerSwarmCleanupOptionsFields() {
     const { control } = useFormContext<SchemaInput, unknown, SchemaOutput>();
-    const { field: backupDeletedObjects } = useController({ control, name: "backupDeletedObjects" });
+    const { field: enabled } = useController({ control, name: "clusterCleanup.enabled" });
+    const { field: pruneImages } = useController({ control, name: "clusterCleanup.pruneImages" });
+    const { field: pruneVolumes } = useController({ control, name: "clusterCleanup.pruneVolumes" });
+    const { field: pruneNetworks } = useController({ control, name: "clusterCleanup.pruneNetworks" });
+    const { field: pruneContainers } = useController({ control, name: "clusterCleanup.pruneContainers" });
 
     return (
         <>
-            <SectionHeader>Backup Options</SectionHeader>
+            <SectionHeader>Docker Swarm Cleanup Options</SectionHeader>
             <div className="flex flex-col gap-6 px-3">
-                <InfoBlock title="Backup Deleted DB Records">
+                <InfoBlock title="Enabled">
                     <Checkbox
-                        checked={backupDeletedObjects.value}
-                        onCheckedChange={backupDeletedObjects.onChange}
+                        checked={enabled.value}
+                        onCheckedChange={enabled.onChange}
                     />
                 </InfoBlock>
+
+                {enabled.value && (
+                    <>
+                        <InfoBlock title="Prune Images">
+                            <Checkbox
+                                checked={pruneImages.value}
+                                onCheckedChange={pruneImages.onChange}
+                            />
+                        </InfoBlock>
+
+                        <InfoBlock title="Prune Volumes">
+                            <Checkbox
+                                checked={pruneVolumes.value}
+                                onCheckedChange={pruneVolumes.onChange}
+                            />
+                        </InfoBlock>
+
+                        <InfoBlock title="Prune Networks">
+                            <Checkbox
+                                checked={pruneNetworks.value}
+                                onCheckedChange={pruneNetworks.onChange}
+                            />
+                        </InfoBlock>
+
+                        <InfoBlock title="Prune Containers">
+                            <Checkbox
+                                checked={pruneContainers.value}
+                                onCheckedChange={pruneContainers.onChange}
+                            />
+                        </InfoBlock>
+                    </>
+                )}
+            </div>
+        </>
+    );
+}
+
+function BackupCleanupOptionsFields() {
+    const { control } = useFormContext<SchemaInput, unknown, SchemaOutput>();
+    const { field: enabled } = useController({ control, name: "backupCleanup.enabled" });
+    const {
+        field: localBackupRetention,
+        fieldState: { error: localBackupRetentionError, invalid: isLocalBackupRetentionInvalid },
+    } = useController({ control, name: "backupCleanup.localBackupRetention" });
+    const {
+        field: cloudBackupRetention,
+        fieldState: { error: cloudBackupRetentionError, invalid: isCloudBackupRetentionInvalid },
+    } = useController({ control, name: "backupCleanup.cloudBackupRetention" });
+
+    return (
+        <>
+            <SectionHeader>Backup Cleanup Options</SectionHeader>
+            <div className="flex flex-col gap-6 px-3">
+                <InfoBlock title="Enabled">
+                    <Checkbox
+                        checked={enabled.value}
+                        onCheckedChange={enabled.onChange}
+                    />
+                </InfoBlock>
+
+                {enabled.value && (
+                    <>
+                        <InfoBlock title="Local Backup Retention">
+                            <FieldGroup>
+                                <Field>
+                                    <Input
+                                        {...localBackupRetention}
+                                        placeholder="30d"
+                                        className="max-w-[400px]"
+                                        aria-invalid={isLocalBackupRetentionInvalid}
+                                    />
+                                    <FieldError errors={[localBackupRetentionError]} />
+                                </Field>
+                            </FieldGroup>
+                        </InfoBlock>
+
+                        <InfoBlock title="Cloud Backup Retention">
+                            <FieldGroup>
+                                <Field>
+                                    <Input
+                                        {...cloudBackupRetention}
+                                        placeholder="30d"
+                                        className="max-w-[400px]"
+                                        aria-invalid={isCloudBackupRetentionInvalid}
+                                    />
+                                    <FieldError errors={[cloudBackupRetentionError]} />
+                                </Field>
+                            </FieldGroup>
+                        </InfoBlock>
+                    </>
+                )}
             </div>
         </>
     );
@@ -383,7 +430,7 @@ function NotificationFields() {
                             onSearch={setFailureSearch}
                             placeholder="None"
                             emptyText="No notifications available"
-                            className="max-w-[460px]"
+                            className="max-w-[400px]"
                             valueKey="id"
                             searchable
                             closeOnSelect
@@ -407,18 +454,37 @@ function NotificationFields() {
     );
 }
 
-function useSystemBackupFormMethods(defaultValues?: SystemBackupSettings) {
+function EnabledCleanupConfigurationFields() {
+    const { control } = useFormContext<SchemaInput, unknown, SchemaOutput>();
+    const status = useWatch({ control, name: "status" });
+
+    if (status !== ESettingStatus.Active) {
+        return null;
+    }
+
+    return (
+        <>
+            <GeneralFields />
+            <DBCleanupOptionsFields />
+            <DockerSwarmCleanupOptionsFields />
+            <BackupCleanupOptionsFields />
+            <NotificationFields />
+        </>
+    );
+}
+
+function useSystemCleanupFormMethods(defaultValues?: SystemCleanupSettings) {
     return useForm<SchemaInput, unknown, SchemaOutput>({
         defaultValues: defaultValues
-            ? mapSystemBackupSettingsToFormInput(defaultValues)
-            : emptySystemBackupConfigurationFormDefaults,
-        resolver: zodResolver(SystemBackupConfigurationFormSchema),
+            ? mapSystemCleanupSettingsToFormInput(defaultValues)
+            : emptySystemCleanupConfigurationFormDefaults,
+        resolver: zodResolver(SystemCleanupConfigurationFormSchema),
         mode: "onSubmit",
     });
 }
 
-export function SystemBackupConfigurationForm({ ref, defaultValues, onSubmit, children }: Props) {
-    const methods = useSystemBackupFormMethods(defaultValues);
+export function SystemCleanupConfigurationForm({ ref, defaultValues, onSubmit, children }: Props) {
+    const methods = useSystemCleanupFormMethods(defaultValues);
 
     useImperativeHandle(
         ref,
@@ -459,7 +525,7 @@ export function SystemBackupConfigurationForm({ ref, defaultValues, onSubmit, ch
                     className="flex flex-col gap-6"
                 >
                     <EnabledField />
-                    <EnabledBackupConfigurationFields />
+                    <EnabledCleanupConfigurationFields />
                     {children}
                 </form>
             </FormProvider>
@@ -468,7 +534,7 @@ export function SystemBackupConfigurationForm({ ref, defaultValues, onSubmit, ch
 }
 
 type Props = PropsWithChildren<{
-    ref?: React.Ref<SystemBackupConfigurationFormRef>;
-    defaultValues?: SystemBackupSettings;
+    ref?: React.Ref<SystemCleanupConfigurationFormRef>;
+    defaultValues?: SystemCleanupSettings;
     onSubmit: (values: SchemaOutput) => void;
 }>;
