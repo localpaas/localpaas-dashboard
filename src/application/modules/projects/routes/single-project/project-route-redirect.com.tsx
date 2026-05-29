@@ -2,12 +2,16 @@ import { Navigate, useParams } from "react-router";
 
 import { ROUTE } from "@application/shared/constants";
 
-export function ProjectGithubAppsLegacyRedirect() {
+interface ProjectRouteRedirectProps {
+    to: (id: string) => string;
+}
+
+export function ProjectRouteRedirect({ to }: ProjectRouteRedirectProps) {
     const { id } = useParams<{ id: string }>();
 
     return (
         <Navigate
-            to={id ? ROUTE.projects.single.providerConfiguration.githubApps.$route(id) : ROUTE.projects.list.$route}
+            to={id ? to(id) : ROUTE.projects.list.$route}
             replace
         />
     );
