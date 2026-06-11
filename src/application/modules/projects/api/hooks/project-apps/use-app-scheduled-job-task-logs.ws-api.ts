@@ -2,21 +2,24 @@ import { use, useMemo } from "react";
 
 import { match } from "oxide.ts";
 import { ProjectsApiContext } from "~/projects/api/api-context";
-import type { AppDeploymentLogsWsHandlers, AppDeploymentLogsWs_StreamLogs_Req } from "~/projects/api/services";
+import type {
+    AppScheduledJobTaskLogsWsHandlers,
+    AppScheduledJobTaskLogsWs_StreamLogs_Req,
+} from "~/projects/api/services";
 
 function createHook() {
-    return function useAppDeploymentLogsWsApi() {
+    return function useAppScheduledJobTaskLogsWsApi() {
         const { api } = use(ProjectsApiContext);
 
         const streams = useMemo(
             () => ({
                 subscribe: async (
-                    data: AppDeploymentLogsWs_StreamLogs_Req["data"],
-                    handlers: AppDeploymentLogsWsHandlers,
+                    data: AppScheduledJobTaskLogsWs_StreamLogs_Req["data"],
+                    handlers: AppScheduledJobTaskLogsWsHandlers,
                     signal?: AbortSignal,
                 ) => {
                     const result = await Promise.resolve(
-                        api.projects.apps.deployments.logs.$.streamLogs({ data }, handlers, signal),
+                        api.projects.apps.scheduledJobs.taskLogs.$.streamLogs({ data }, handlers, signal),
                     );
 
                     return match(result, {
@@ -36,4 +39,4 @@ function createHook() {
     };
 }
 
-export const useAppDeploymentLogsWsApi = createHook();
+export const useAppScheduledJobTaskLogsWsApi = createHook();
